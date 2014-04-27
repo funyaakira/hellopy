@@ -19,7 +19,7 @@ class niconico:
         
         self.userid=iniFile.get("NICONICO","USERID")
         self.passwd=iniFile.get("NICONICO","PASSWD")
-        self.mylistId = iniFile.get("NICONICO","MYLISTID")
+#         self.mylistId = iniFile.get("NICONICO","MYLISTID")
         
     def getToken(self):
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookielib.CookieJar()))
@@ -34,12 +34,15 @@ class niconico:
                 token = mo.group("token")
                 return token
         
-    def addMyList(self, videoId):
+    def addMyList(self, videoId, tgtMyListId=None):
         token = self.getToken()
         
+        if tgtMyListId != None:
+            myListId = tgtMyListId
+            
         cmdurl = "http://www.nicovideo.jp/api/mylist/add"
         q = {}
-        q["group_id"] = self.mylistId
+        q["group_id"] = myListId
         q["item_type"] = 0
         q["item_id"] = videoId
         q["description"] = u""
@@ -47,6 +50,7 @@ class niconico:
         cmdurl += "?" + urllib.urlencode(q)
         return json.load(urllib2.urlopen(cmdurl), encoding='utf8')
     
+    @classmethod
     def getVideoInfo(self, videoId):
         tgtUrl = 'http://ext.nicovideo.jp/api/getthumbinfo/' + videoId
         tgtXml = urllib2.urlopen(tgtUrl).read()

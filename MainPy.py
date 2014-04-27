@@ -7,7 +7,6 @@ Created on 2014/04/19
 '''
 
 import ConfigParser
-import niconico
 import datetime
 import logging
 import os, sys
@@ -18,6 +17,7 @@ import json
 from tweepy.streaming import StreamListener, Stream
 from tweepy.auth import OAuthHandler
 from datetime import timedelta
+from niconico import niconico
 
 # 実行はリモートで ssh pi@192.168.11.20 python /home/pi/Py/HelloPy/MainPy.py
 os.chdir(sys.path[0])
@@ -33,8 +33,11 @@ if serverMode == 1:
     logging.basicConfig(filename='log.txt',level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.DEBUG)
-  
-  
+ 
+# ニコニコ動画の情報を取得 
+myLstIdVo = inifile.get("NICONICO","MYLISTID_VOCALOID")
+myLstIdOh = inifile.get("NICONICO","MYLISTID_OTHER")
+
 # WEBサーバの情報を取得
 htpdocs = inifile.get("WEB","DIR")
 
@@ -57,7 +60,7 @@ class AbstractedlyListener(StreamListener):
         StreamListener.__init__(self)
         
         # ニコニコ処理用のインスタンスを作って、on_statusメソッド内ではそれを使いまわす
-        self.n = niconico.niconico()
+        self.n = niconico()
         
     """ Let's stare abstractedly at the User Streams ! """
     def on_status(self, status):
@@ -88,32 +91,36 @@ class AbstractedlyListener(StreamListener):
                     startIndex = inUrl.index("sm")
                     videoId = inUrl[startIndex:startIndex+10]
                     
-                    # 動画の投稿日を取得
-                    vInfo = self.n.getVideoInfo(videoId)
-                    uploadDate = vInfo['first_retrieve'][0:10]
+                    # 動画情報を取得
+                    vInfo = niconico.getVideoInfo(videoId)
+                    uploadDate = vInfo['first_retrieve'][0:10] # 動画の投稿日を取得
+                    vCategory = vInfo['tag']
                     
                     # 動画の投稿日を現時点の日付と比較し、同じであればマイリストに登録する
                     todayDate = str(datetime.datetime.today())[0:10] 
-                    if True:
-#                     if uploadDate == todayDate:
-#                         ret = self.n.addMyList(videoId)
-#                         if ret['status'] == 'ok':
-#                             logging.debug(u"以下の動画をマイリストに登録しました 動画ID: %s 投稿日: %s " % (videoId, uploadDate))
-# #                             api.retweet(status.id) #マイリスしたツイートをリツイートする
-# #                             logging.debug(u"登録した動画のツイートをリツイートしました")
-#                             
+
+                    if uploadDate == todayDate:
+                        
+                        if vCategory == "VOCALOID":
+                            myListID = myLstIdVo
+                        else:
+                            myListID = myLstIdOh
+                        
+                        ## マイリス登録処理    
+                        ret = self.n.addMyList(videoId, myListID)
+                        
+                        ## マイリス登録の結果によって処理を分岐
+                        if ret['status'] == 'ok':
+                            logging.debug(u"以下の動画をマイリストに登録しました 動画ID: %s 投稿日: %s " % (videoId, uploadDate))
+#                             api.retweet(status.id) #マイリスしたツイートをリツイートする
+#                             logging.debug(u"登録した動画のツイートをリツイートしました")
+                             
 #                             str1 = "https://api.twitter.com/1/statuses/oembed.json?id="+str(status.id)
 #                             response = urllib2.urlopen("https://api.twitter.com/1/statuses/oembed.json?id="+str(status.id))
 #                             oembedData = json.loads(response.read())
-#                             print oembedData["html"]
-#                             
-#                         else:
-#                             logging.debug(u"マイリストの登録に失敗しました(重複登録など) 動画ID: %s 投稿日 %s " % (videoId, uploadDate))
-                            response = urllib2.urlopen("https://api.twitter.com/1/statuses/oembed.json?id="+str(status.id))
-                            oembedData = json.loads(response.read())
-                            f = open(htpdocs + todayDate + ".html","a")
-                            f.write(oembedData["html"].encode('utf_8'))
-                            f.close()
+    
+                        else:
+                            logging.debug(u"マイリストの登録に失敗しました(重複登録など) 動画ID: %s 投稿日 %s " % (videoId, uploadDate))
                     else:
                         logging.debug(u"見つけた動画の投稿日は今日ではありませんでした 動画ID: %s 投稿日: %s " % (videoId, uploadDate))
                     
