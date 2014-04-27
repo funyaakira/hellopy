@@ -29,7 +29,7 @@ inifile = ConfigParser.SafeConfigParser()
 inifile.read("config.ini")
 
 serverMode = inifile.get("MODE","SERVER")
-if serverMode == 1:
+if serverMode == "1":
     logging.basicConfig(filename='log.txt',level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.DEBUG)
